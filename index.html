@@ -21,12 +21,26 @@
     <header class="bg-white shadow-md z-20 relative">
         <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
             <h1 class="text-2xl font-extrabold text-indigo-600">PlayLocal 🏆</h1>
-            <select id="cityFilter" class="bg-slate-100 border-none rounded-lg px-4 py-2 font-semibold cursor-pointer outline-none focus:ring-2 focus:ring-indigo-500">
-                <option value="Global">Global View</option>
-                <option value="Los Angeles">Los Angeles</option>
-                <option value="London">London</option>
-                <option value="Amsterdam">Amsterdam</option>
-            </select>
+            
+            <!-- Filters Container -->
+            <div class="flex space-x-3">
+                <!-- Sport Filter -->
+                <select id="sportFilter" class="bg-slate-100 border-none rounded-lg px-3 py-2 font-semibold text-sm md:text-base cursor-pointer outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="All">All Sports</option>
+                    <option value="Beach Volleyball">Beach Volleyball</option>
+                    <option value="Rowing">Rowing</option>
+                    <option value="Padel">Padel</option>
+                    <!-- Add more sports here as you expand -->
+                </select>
+
+                <!-- City Filter -->
+                <select id="cityFilter" class="bg-slate-100 border-none rounded-lg px-3 py-2 font-semibold text-sm md:text-base cursor-pointer outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="Global">Global View</option>
+                    <option value="Los Angeles">Los Angeles</option>
+                    <option value="London">London</option>
+                    <option value="Amsterdam">Amsterdam</option>
+                </select>
+            </div>
         </div>
     </header>
 
@@ -37,10 +51,9 @@
         <div id="map" class="w-full h-full z-0"></div>
 
         <!-- Slide-out Side Panel -->
-        <!-- Note: md:translate-x-0 keeps it permanently visible on desktop -->
         <div id="sidePanel" class="absolute md:relative right-0 top-0 h-full w-full md:w-[400px] bg-white shadow-2xl transform translate-x-full md:translate-x-0 transition-transform duration-300 z-10 flex flex-col">
             
-            <!-- Close Button (Hidden by default, shown when club is active) -->
+            <!-- Close Button -->
             <button id="closePanel" class="hidden absolute top-4 right-4 bg-white/80 p-2 rounded-full shadow hover:bg-white z-20">
                 <svg class="w-5 h-5 text-slate-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
@@ -55,7 +68,7 @@
                 </p>
             </div>
 
-            <!-- Panel Content (Hidden by default) -->
+            <!-- Panel Content -->
             <div id="panelContent" class="hidden overflow-y-auto flex-1 pb-8"></div>
         </div>
 
@@ -85,6 +98,16 @@
             }
         ];
 
+        // Color map for different sports
+        const sportColors = {
+            "Beach Volleyball": "#eab308", // Yellow
+            "Rowing": "#3b82f6",           // Blue
+            "Padel": "#22c55e",            // Green
+            "Soccer": "#ef4444",           // Red
+            "Rugby": "#8b5cf6",            // Purple
+            "Default": "#64748b"           // Slate (fallback)
+        };
+
         const cityCoords = {
             "Global": [30, 0],
             "Los Angeles": [34.0522, -118.2437],
@@ -102,28 +125,53 @@
             maxZoom: 20
         }).addTo(map);
 
+        // Layer Group to hold our markers so we can clear/refresh them easily
+        const markersGroup = L.layerGroup().addTo(map);
+
         // Panel Elements
         const sidePanel = document.getElementById('sidePanel');
         const emptyState = document.getElementById('emptyState');
         const panelContent = document.getElementById('panelContent');
         const closePanelBtn = document.getElementById('closePanel');
 
-        // Populate Map with Markers
-        clubs.forEach(club => {
-            const marker = L.marker([club.lat, club.lng]).addTo(map);
+        // Function to render markers based on filters
+        function renderMarkers() {
+            // Clear existing markers from the map
+            markersGroup.clearLayers();
             
-            marker.on('click', () => {
-                openPanel(club);
-                map.flyTo([club.lat, club.lng], 14, { duration: 1 }); 
+            const selectedCity = document.getElementById('cityFilter').value;
+            const selectedSport = document.getElementById('sportFilter').value;
+
+            clubs.forEach(club => {
+                // Check if the club matches the current filters
+                const matchesCity = selectedCity === "Global" || club.city === selectedCity;
+                const matchesSport = selectedSport === "All" || club.sport === selectedSport;
+
+                if (matchesCity && matchesSport) {
+                    // Get color from map, or use Default if sport isn't mapped
+                    const dotColor = sportColors[club.sport] || sportColors["Default"];
+                    
+                    // Create a circular marker (dot)
+                    const marker = L.circleMarker([club.lat, club.lng], {
+                        radius: 10,
+                        fillColor: dotColor,
+                        color: "#ffffff", // White border around the dot
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 0.9
+                    }).addTo(markersGroup);
+                    
+                    marker.on('click', () => {
+                        openPanel(club);
+                        map.flyTo([club.lat, club.lng], 14, { duration: 1 }); 
+                    });
+                }
             });
-        });
+        }
 
         // Open Side Panel Logic
         function openPanel(club) {
-            // Mobile: slide in
             sidePanel.classList.remove('translate-x-full');
-            
-            // Toggle Views
             emptyState.classList.add('hidden');
             closePanelBtn.classList.remove('hidden');
             panelContent.classList.remove('hidden');
@@ -161,10 +209,7 @@
 
         // Close/Reset Panel Logic
         function resetPanel() {
-            // Mobile: slide out
             sidePanel.classList.add('translate-x-full');
-            
-            // Toggle Views back to default
             emptyState.classList.remove('hidden');
             closePanelBtn.classList.add('hidden');
             panelContent.classList.add('hidden');
@@ -173,13 +218,22 @@
 
         closePanelBtn.addEventListener('click', resetPanel);
 
-        // City Filter Dropdown Logic
+        // Filter Event Listeners
         document.getElementById('cityFilter').addEventListener('change', (e) => {
             const city = e.target.value;
             const zoomLevel = city === "Global" ? 2 : 11;
             map.flyTo(cityCoords[city], zoomLevel, { duration: 1.5 });
             resetPanel(); 
+            renderMarkers(); // Re-draw dots based on new filter
         });
+
+        document.getElementById('sportFilter').addEventListener('change', () => {
+            resetPanel();
+            renderMarkers(); // Re-draw dots based on new filter
+        });
+
+        // Initial render of markers on page load
+        renderMarkers();
     </script>
 </body>
 </html>
