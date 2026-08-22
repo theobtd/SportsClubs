@@ -5,133 +5,160 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PlayLocal | Discover Amateur Sports</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        body { font-family: 'Inter', sans-serif; }
         .video-placeholder { background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('https://images.unsplash.com/photo-1526232761682-d26e03ac148e?auto=format&fit=crop&w=600&q=80') center/cover; }
+        /* Custom scrollbar for panel */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 </head>
-<body class="text-slate-800">
+<body class="text-slate-800 h-screen flex flex-col overflow-hidden">
 
     <!-- Header -->
-    <header class="bg-white shadow-sm sticky top-0 z-10">
-        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+    <header class="bg-white shadow-md z-20 relative">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
             <h1 class="text-2xl font-extrabold text-indigo-600">PlayLocal 🏆</h1>
             <select id="cityFilter" class="bg-slate-100 border-none rounded-lg px-4 py-2 font-semibold cursor-pointer outline-none focus:ring-2 focus:ring-indigo-500">
-                <option value="All">All Cities</option>
+                <option value="Global">Global View</option>
                 <option value="Los Angeles">Los Angeles</option>
-                <option value="New York City">New York City</option>
                 <option value="London">London</option>
                 <option value="Amsterdam">Amsterdam</option>
-                <option value="Hong Kong">Hong Kong</option>
-                <option value="Sydney">Sydney</option>
             </select>
         </div>
     </header>
 
-    <!-- Hero Section -->
-    <section class="max-w-7xl mx-auto px-4 py-12 text-center">
-        <h2 class="text-4xl md:text-5xl font-extrabold mb-4">Find your team. <br/><span class="text-indigo-600">No experience needed.</span></h2>
-        <p class="text-lg text-slate-500 max-w-2xl mx-auto">Discover beginner-friendly amateur sports clubs in your city. Watch their intro videos, see what to bring, and book your first trial class today.</p>
-    </section>
+    <!-- Main Content Area -->
+    <main class="flex-1 flex relative overflow-hidden">
+        
+        <!-- Map Container -->
+        <div id="map" class="w-full h-full z-0"></div>
 
-    <!-- Clubs Grid -->
-    <main class="max-w-7xl mx-auto px-4 pb-20">
-        <div id="clubsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <!-- Cards will be injected here via JavaScript -->
+        <!-- Slide-out Side Panel -->
+        <div id="sidePanel" class="absolute md:relative right-0 top-0 h-full w-full md:w-[400px] bg-white shadow-2xl transform translate-x-full transition-transform duration-300 z-10 flex flex-col">
+            
+            <!-- Close Button -->
+            <button id="closePanel" class="absolute top-4 right-4 bg-white/80 p-2 rounded-full shadow hover:bg-white z-10">
+                <svg class="w-5 h-5 text-slate-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+
+            <!-- Panel Content injected via JS -->
+            <div id="panelContent" class="overflow-y-auto flex-1 pb-8"></div>
         </div>
+
     </main>
 
     <!-- Application Logic -->
     <script>
-        // Mock Database
+        // Mock Database with Coordinates added
         const clubs = [
             {
-                name: "Sunset Beach Volleyball",
-                sport: "Beach Volleyball",
-                city: "Los Angeles",
-                category: "Mixed",
-                trialTime: "Saturdays @ 10:00 AM",
-                price: "$10",
-                bring: "Water, sunglasses, and good vibes.",
-                location: "Santa Monica Pier (South Side)",
-                description: "We are a super casual group of young professionals who love to start the weekend with some sand and sun. Don't know the rules? No problem, we'll teach you! Afterwards, we usually grab smoothies nearby.",
+                name: "Sunset Beach Volleyball", sport: "Beach Volleyball", city: "Los Angeles", category: "Mixed",
+                lat: 34.0092, lng: -118.4976, // Santa Monica coordinates
+                trialTime: "Saturdays @ 10:00 AM", price: "$10",
+                bring: "Water, sunglasses, and good vibes.", location: "Santa Monica Pier (South Side)",
+                description: "We are a super casual group of young professionals who love to start the weekend with some sand and sun. Don't know the rules? No problem, we'll teach you! Afterwards, we usually grab smoothies nearby."
             },
             {
-                name: "Thames Rowing Club (Beginners)",
-                sport: "Rowing",
-                city: "London",
-                category: "Womens",
-                trialTime: "Sundays @ 8:00 AM",
-                price: "£15",
-                bring: "Tight-fitting athletic gear, water bottle.",
-                location: "Putney Embankment",
-                description: "Always wanted to try rowing but felt intimidated? Our beginner squads are specifically designed for zero-experience adults. It's a fantastic full-body workout and a highly supportive team environment.",
+                name: "Thames Rowing Club (Beginners)", sport: "Rowing", city: "London", category: "Womens",
+                lat: 51.4668, lng: -0.2133, // Putney coordinates
+                trialTime: "Sundays @ 8:00 AM", price: "£15",
+                bring: "Tight-fitting athletic gear, water bottle.", location: "Putney Embankment",
+                description: "Always wanted to try rowing but felt intimidated? Our beginner squads are specifically designed for zero-experience adults. It's a fantastic full-body workout and a supportive team environment."
             },
             {
-                name: "Downtown Padel Social",
-                sport: "Padel",
-                city: "Amsterdam",
-                category: "Mixed",
-                trialTime: "Tuesdays @ 6:30 PM",
-                price: "€12",
-                bring: "Just sportswear. We provide the rackets!",
-                location: "Amsterdam Zuid Padel Club",
-                description: "Padel is the fastest growing sport in the world for a reason—it's incredibly easy to pick up! We host weekly beginner sessions followed by drinks at the clubhouse. Perfect for making new friends.",
+                name: "Downtown Padel Social", sport: "Padel", city: "Amsterdam", category: "Mixed",
+                lat: 52.3390, lng: 4.8731, // Amsterdam Zuid coordinates
+                trialTime: "Tuesdays @ 6:30 PM", price: "€12",
+                bring: "Just sportswear. We provide the rackets!", location: "Amsterdam Zuid Padel Club",
+                description: "Padel is the fastest growing sport in the world for a reason—it's incredibly easy to pick up! We host weekly beginner sessions followed by drinks at the clubhouse. Perfect for making new friends."
             }
         ];
 
-        const container = document.getElementById('clubsContainer');
-        const cityFilter = document.getElementById('cityFilter');
+        // City Coordinates for Dropdown Zoom
+        const cityCoords = {
+            "Global": [30, 0],
+            "Los Angeles": [34.0522, -118.2437],
+            "London": [51.5074, -0.1278],
+            "Amsterdam": [52.3676, 4.9041]
+        };
 
-        function renderClubs(filterCity = 'All') {
-            container.innerHTML = '';
+        // Initialize Map
+        const map = L.map('map', { zoomControl: false }).setView([30, 0], 2);
+        L.control.zoom({ position: 'bottomleft' }).addTo(map);
+        
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+            subdomains: 'abcd',
+            maxZoom: 20
+        }).addTo(map);
+
+        // Panel Elements
+        const sidePanel = document.getElementById('sidePanel');
+        const panelContent = document.getElementById('panelContent');
+        const closePanelBtn = document.getElementById('closePanel');
+        let activeMarker = null;
+
+        // Populate Map with Markers
+        clubs.forEach(club => {
+            const marker = L.marker([club.lat, club.lng]).addTo(map);
             
-            const filteredClubs = clubs.filter(club => filterCity === 'All' || club.city === filterCity);
+            marker.on('click', () => {
+                openPanel(club);
+                map.flyTo([club.lat, club.lng], 14, { duration: 1 }); // Zoom to pin
+            });
+        });
 
-            filteredClubs.forEach(club => {
-                const card = document.createElement('div');
-                card.className = "bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow overflow-hidden border border-slate-100 flex flex-col";
+        // Open Side Panel Logic
+        function openPanel(club) {
+            sidePanel.classList.remove('translate-x-full');
+            
+            panelContent.innerHTML = `
+                <div class="h-64 relative video-placeholder flex items-center justify-center cursor-pointer group">
+                    <div class="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                        <svg class="w-8 h-8 text-indigo-600 ml-1" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4l12 6-12 6z"></path></svg>
+                    </div>
+                    <span class="absolute bottom-3 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded font-semibold">0:30</span>
+                </div>
                 
-                card.innerHTML = `
-                    <div class="h-48 relative video-placeholder flex items-center justify-center cursor-pointer group">
-                        <!-- Play Button Graphic -->
-                        <div class="w-14 h-14 bg-white/90 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
-                            <svg class="w-6 h-6 text-indigo-600 ml-1" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4l12 6-12 6z"></path></svg>
-                        </div>
-                        <span class="absolute bottom-3 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded font-semibold">0:30</span>
+                <div class="p-6">
+                    <div class="flex justify-between items-start mb-3">
+                        <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider">${club.sport} • ${club.category}</span>
+                        <span class="text-sm font-bold bg-green-100 text-green-700 px-3 py-1 rounded-full">${club.price}</span>
+                    </div>
+                    <h2 class="text-2xl font-extrabold mb-2">${club.name}</h2>
+                    <p class="text-slate-500 text-sm mb-6">📍 ${club.location}, ${club.city}</p>
+                    
+                    <p class="text-slate-600 text-base leading-relaxed mb-6">${club.description}</p>
+                    
+                    <div class="bg-indigo-50 p-4 rounded-xl mb-6 border border-indigo-100">
+                        <h4 class="font-bold text-indigo-900 mb-2">First Session Info</h4>
+                        <p class="text-sm text-indigo-800 mb-2"><strong>🗓️ When:</strong> ${club.trialTime}</p>
+                        <p class="text-sm text-indigo-800"><strong>🎒 Bring:</strong> ${club.bring}</p>
                     </div>
                     
-                    <div class="p-6 flex-1 flex flex-col">
-                        <div class="flex justify-between items-start mb-2">
-                            <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider">${club.sport} • ${club.category}</span>
-                            <span class="text-sm font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded">${club.price}</span>
-                        </div>
-                        <h3 class="text-xl font-extrabold mb-1">${club.name}</h3>
-                        <p class="text-slate-500 text-sm mb-4">📍 ${club.location}, ${club.city}</p>
-                        
-                        <p class="text-slate-600 text-sm mb-4 flex-1">${club.description}</p>
-                        
-                        <div class="bg-slate-50 p-4 rounded-xl mb-6">
-                            <p class="text-sm font-semibold mb-1">🗓️ Next Intro: <span class="font-normal">${club.trialTime}</span></p>
-                            <p class="text-sm font-semibold">🎒 Bring: <span class="font-normal">${club.bring}</span></p>
-                        </div>
-                        
-                        <button class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-xl transition-colors">
-                            Book Intro Session
-                        </button>
-                    </div>
-                `;
-                container.appendChild(card);
-            });
+                    <button class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 px-4 rounded-xl transition-colors shadow-md shadow-indigo-200">
+                        Book Intro Session
+                    </button>
+                </div>
+            `;
         }
 
-        // Initial render
-        renderClubs();
+        // Close Panel Logic
+        closePanelBtn.addEventListener('click', () => {
+            sidePanel.classList.add('translate-x-full');
+        });
 
-        // Listen for filter changes
-        cityFilter.addEventListener('change', (e) => {
-            renderClubs(e.target.value);
+        // City Filter Dropdown Logic
+        document.getElementById('cityFilter').addEventListener('change', (e) => {
+            const city = e.target.value;
+            const zoomLevel = city === "Global" ? 2 : 11;
+            map.flyTo(cityCoords[city], zoomLevel, { duration: 1.5 });
+            sidePanel.classList.add('translate-x-full'); // Hide panel on filter change
         });
     </script>
 </body>
