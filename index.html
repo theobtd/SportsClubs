@@ -22,23 +22,19 @@
         <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
             <h1 class="text-2xl font-extrabold text-indigo-600">PlayLocal 🏆</h1>
             
-            <!-- Filters Container -->
+            <!-- Filter Controls -->
             <div class="flex space-x-3">
-                <!-- Sport Filter -->
                 <select id="sportFilter" class="bg-slate-100 border-none rounded-lg px-3 py-2 font-semibold text-sm md:text-base cursor-pointer outline-none focus:ring-2 focus:ring-indigo-500">
                     <option value="All">All Sports</option>
-                    <option value="Beach Volleyball">Beach Volleyball</option>
-                    <option value="Rowing">Rowing</option>
-                    <option value="Padel">Padel</option>
-                    <!-- Add more sports here as you expand -->
+                    <!-- Options injected via JS -->
                 </select>
 
-                <!-- City Filter -->
                 <select id="cityFilter" class="bg-slate-100 border-none rounded-lg px-3 py-2 font-semibold text-sm md:text-base cursor-pointer outline-none focus:ring-2 focus:ring-indigo-500">
                     <option value="Global">Global View</option>
                     <option value="Los Angeles">Los Angeles</option>
                     <option value="London">London</option>
                     <option value="Amsterdam">Amsterdam</option>
+                    <option value="Hong Kong">Hong Kong</option>
                 </select>
             </div>
         </div>
@@ -76,44 +72,78 @@
 
     <!-- Application Logic -->
     <script>
-        // Mock Database with Coordinates
-        const clubs = [
-            {
-                name: "Sunset Beach Volleyball", sport: "Beach Volleyball", city: "Los Angeles", category: "Mixed",
-                lat: 34.0092, lng: -118.4976, trialTime: "Saturdays @ 10:00 AM", price: "$10",
-                bring: "Water, sunglasses, and good vibes.", location: "Santa Monica Pier (South Side)",
-                description: "We are a super casual group of young professionals who love to start the weekend with some sand and sun. Don't know the rules? No problem, we'll teach you! Afterwards, we usually grab smoothies nearby."
-            },
-            {
-                name: "Thames Rowing Club (Beginners)", sport: "Rowing", city: "London", category: "Womens",
-                lat: 51.4668, lng: -0.2133, trialTime: "Sundays @ 8:00 AM", price: "£15",
-                bring: "Tight-fitting athletic gear, water bottle.", location: "Putney Embankment",
-                description: "Always wanted to try rowing but felt intimidated? Our beginner squads are specifically designed for zero-experience adults. It's a fantastic full-body workout and a supportive team environment."
-            },
-            {
-                name: "Downtown Padel Social", sport: "Padel", city: "Amsterdam", category: "Mixed",
-                lat: 52.3390, lng: 4.8731, trialTime: "Tuesdays @ 6:30 PM", price: "€12",
-                bring: "Just sportswear. We provide the rackets!", location: "Amsterdam Zuid Padel Club",
-                description: "Padel is the fastest growing sport in the world for a reason—it's incredibly easy to pick up! We host weekly beginner sessions followed by drinks at the clubhouse. Perfect for making new friends."
-            }
-        ];
-
-        // Color map for different sports
+        // 1. Configuration & Styling
         const sportColors = {
-            "Beach Volleyball": "#eab308", // Yellow
-            "Rowing": "#3b82f6",           // Blue
-            "Padel": "#22c55e",            // Green
-            "Soccer": "#ef4444",           // Red
-            "Rugby": "#8b5cf6",            // Purple
-            "Default": "#64748b"           // Slate (fallback)
+            "Touch Rugby": "#d946ef", "Rugby": "#8b5cf6", "Soccer": "#ef4444", 
+            "Lacrosse": "#f97316", "Volleyball": "#facc15", "Beach Volleyball": "#eab308", 
+            "Field Hockey": "#84cc16", "Padel": "#22c55e", "Tennis": "#14b8a6", 
+            "Squash": "#06b6d4", "Badminton": "#0ea5e9", "Rowing": "#3b82f6", 
+            "Archery": "#6366f1", "Dancing": "#ec4899", "Boxing": "#f43f5e", 
+            "AFL": "#64748b"
         };
 
         const cityCoords = {
             "Global": [30, 0],
             "Los Angeles": [34.0522, -118.2437],
             "London": [51.5074, -0.1278],
-            "Amsterdam": [52.3676, 4.9041]
+            "Amsterdam": [52.3676, 4.9041],
+            "Hong Kong": [22.3193, 114.1694]
         };
+
+        // 2. Mock Data Generator (Creates 15 clubs per city)
+        const generateMockClubs = () => {
+            const generated = [];
+            const citiesData = {
+                "Los Angeles": { lat: 34.0522, lng: -118.2437, hoods: ["Santa Monica", "Silver Lake", "Downtown", "Echo Park", "Venice Beach"] },
+                "London": { lat: 51.5074, lng: -0.1278, hoods: ["Clapham", "Hyde Park", "Hackney", "Battersea", "Regent's Park"] },
+                "Amsterdam": { lat: 52.3676, lng: 4.9041, hoods: ["Vondelpark", "De Pijp", "Oud-West", "Zuidas", "Noord"] },
+                "Hong Kong": { lat: 22.3193, lng: 114.1694, hoods: ["Happy Valley", "Victoria Park", "Kowloon", "Repulse Bay", "Wan Chai"] }
+            };
+
+            const sports = Object.keys(sportColors);
+            const suffixes = ["Social", "Collective", "Club", "Beginners", "Academy", "Crew"];
+            
+            Object.keys(citiesData).forEach(cityName => {
+                const city = citiesData[cityName];
+                for (let i = 0; i < 15; i++) {
+                    const sport = sports[Math.floor(Math.random() * sports.length)];
+                    const hood = city.hoods[Math.floor(Math.random() * city.hoods.length)];
+                    const suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
+                    
+                    // Scatter pins randomly within ~5-10km of the city center
+                    const latOffset = (Math.random() - 0.5) * 0.15;
+                    const lngOffset = (Math.random() - 0.5) * 0.15;
+
+                    generated.push({
+                        name: `${hood} ${sport} ${suffix}`,
+                        sport: sport,
+                        city: cityName,
+                        category: ["Mixed", "Womens", "Mens"][Math.floor(Math.random() * 3)],
+                        lat: city.lat + latOffset,
+                        lng: city.lng + lngOffset,
+                        trialTime: ["Saturdays @ 10:00 AM", "Sundays @ 9:00 AM", "Tuesdays @ 6:30 PM", "Thursdays @ 7:00 PM"][Math.floor(Math.random() * 4)],
+                        price: ["$10", "£8", "€12", "$15", "Free"][Math.floor(Math.random() * 5)],
+                        bring: "Comfortable athletic wear, a water bottle, and good vibes. All equipment is provided!",
+                        location: `${hood} Community Grounds`,
+                        description: `Always wanted to try ${sport} but felt intimidated? Our beginner group in ${hood} is specifically designed for zero-experience adults. It's a fantastic workout and a highly supportive team environment. We focus on fun, learning the basics, and we usually grab drinks or food together after the session!`
+                    });
+                }
+            });
+            return generated;
+        };
+
+        const clubs = generateMockClubs();
+
+        // 3. Initialize UI & Map
+        
+        // Populate Sport Dropdown
+        const sportFilter = document.getElementById('sportFilter');
+        Object.keys(sportColors).forEach(sport => {
+            const option = document.createElement('option');
+            option.value = sport;
+            option.textContent = sport;
+            sportFilter.appendChild(option);
+        });
 
         // Initialize Map
         const map = L.map('map', { zoomControl: false }).setView([30, 0], 2);
@@ -125,7 +155,6 @@
             maxZoom: 20
         }).addTo(map);
 
-        // Layer Group to hold our markers so we can clear/refresh them easily
         const markersGroup = L.layerGroup().addTo(map);
 
         // Panel Elements
@@ -134,28 +163,24 @@
         const panelContent = document.getElementById('panelContent');
         const closePanelBtn = document.getElementById('closePanel');
 
-        // Function to render markers based on filters
+        // 4. Render & Interaction Logic
         function renderMarkers() {
-            // Clear existing markers from the map
             markersGroup.clearLayers();
             
             const selectedCity = document.getElementById('cityFilter').value;
             const selectedSport = document.getElementById('sportFilter').value;
 
             clubs.forEach(club => {
-                // Check if the club matches the current filters
                 const matchesCity = selectedCity === "Global" || club.city === selectedCity;
                 const matchesSport = selectedSport === "All" || club.sport === selectedSport;
 
                 if (matchesCity && matchesSport) {
-                    // Get color from map, or use Default if sport isn't mapped
-                    const dotColor = sportColors[club.sport] || sportColors["Default"];
+                    const dotColor = sportColors[club.sport];
                     
-                    // Create a circular marker (dot)
                     const marker = L.circleMarker([club.lat, club.lng], {
                         radius: 10,
                         fillColor: dotColor,
-                        color: "#ffffff", // White border around the dot
+                        color: "#ffffff", 
                         weight: 2,
                         opacity: 1,
                         fillOpacity: 0.9
@@ -169,7 +194,6 @@
             });
         }
 
-        // Open Side Panel Logic
         function openPanel(club) {
             sidePanel.classList.remove('translate-x-full');
             emptyState.classList.add('hidden');
@@ -186,7 +210,7 @@
                 
                 <div class="p-6">
                     <div class="flex justify-between items-start mb-3">
-                        <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider">${club.sport} • ${club.category}</span>
+                        <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider" style="color: ${sportColors[club.sport]}">${club.sport} • ${club.category}</span>
                         <span class="text-sm font-bold bg-green-100 text-green-700 px-3 py-1 rounded-full">${club.price}</span>
                     </div>
                     <h2 class="text-2xl font-extrabold mb-2">${club.name}</h2>
@@ -207,7 +231,6 @@
             `;
         }
 
-        // Close/Reset Panel Logic
         function resetPanel() {
             sidePanel.classList.add('translate-x-full');
             emptyState.classList.remove('hidden');
@@ -218,21 +241,20 @@
 
         closePanelBtn.addEventListener('click', resetPanel);
 
-        // Filter Event Listeners
         document.getElementById('cityFilter').addEventListener('change', (e) => {
             const city = e.target.value;
             const zoomLevel = city === "Global" ? 2 : 11;
             map.flyTo(cityCoords[city], zoomLevel, { duration: 1.5 });
             resetPanel(); 
-            renderMarkers(); // Re-draw dots based on new filter
+            renderMarkers(); 
         });
 
         document.getElementById('sportFilter').addEventListener('change', () => {
             resetPanel();
-            renderMarkers(); // Re-draw dots based on new filter
+            renderMarkers(); 
         });
 
-        // Initial render of markers on page load
+        // Initial render
         renderMarkers();
     </script>
 </body>
