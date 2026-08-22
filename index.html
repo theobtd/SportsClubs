@@ -8,10 +8,9 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap');
         body { font-family: 'Inter', sans-serif; }
         .video-placeholder { background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('https://images.unsplash.com/photo-1526232761682-d26e03ac148e?auto=format&fit=crop&w=600&q=80') center/cover; }
-        /* Custom scrollbar for panel */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
@@ -38,47 +37,54 @@
         <div id="map" class="w-full h-full z-0"></div>
 
         <!-- Slide-out Side Panel -->
-        <div id="sidePanel" class="absolute md:relative right-0 top-0 h-full w-full md:w-[400px] bg-white shadow-2xl transform translate-x-full transition-transform duration-300 z-10 flex flex-col">
+        <!-- Note: md:translate-x-0 keeps it permanently visible on desktop -->
+        <div id="sidePanel" class="absolute md:relative right-0 top-0 h-full w-full md:w-[400px] bg-white shadow-2xl transform translate-x-full md:translate-x-0 transition-transform duration-300 z-10 flex flex-col">
             
-            <!-- Close Button -->
-            <button id="closePanel" class="absolute top-4 right-4 bg-white/80 p-2 rounded-full shadow hover:bg-white z-10">
+            <!-- Close Button (Hidden by default, shown when club is active) -->
+            <button id="closePanel" class="hidden absolute top-4 right-4 bg-white/80 p-2 rounded-full shadow hover:bg-white z-20">
                 <svg class="w-5 h-5 text-slate-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
 
-            <!-- Panel Content injected via JS -->
-            <div id="panelContent" class="overflow-y-auto flex-1 pb-8"></div>
+            <!-- Default Empty State -->
+            <div id="emptyState" class="flex-1 flex flex-col items-center justify-center p-8 text-center bg-gradient-to-br from-slate-50 to-indigo-50/50">
+                <h2 class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-teal-500 mb-4 leading-tight tracking-tight">
+                    Your city is your playground.
+                </h2>
+                <p class="text-slate-500 font-medium text-lg">
+                    Tap a pin on the map to find your team.
+                </p>
+            </div>
+
+            <!-- Panel Content (Hidden by default) -->
+            <div id="panelContent" class="hidden overflow-y-auto flex-1 pb-8"></div>
         </div>
 
     </main>
 
     <!-- Application Logic -->
     <script>
-        // Mock Database with Coordinates added
+        // Mock Database with Coordinates
         const clubs = [
             {
                 name: "Sunset Beach Volleyball", sport: "Beach Volleyball", city: "Los Angeles", category: "Mixed",
-                lat: 34.0092, lng: -118.4976, // Santa Monica coordinates
-                trialTime: "Saturdays @ 10:00 AM", price: "$10",
+                lat: 34.0092, lng: -118.4976, trialTime: "Saturdays @ 10:00 AM", price: "$10",
                 bring: "Water, sunglasses, and good vibes.", location: "Santa Monica Pier (South Side)",
                 description: "We are a super casual group of young professionals who love to start the weekend with some sand and sun. Don't know the rules? No problem, we'll teach you! Afterwards, we usually grab smoothies nearby."
             },
             {
                 name: "Thames Rowing Club (Beginners)", sport: "Rowing", city: "London", category: "Womens",
-                lat: 51.4668, lng: -0.2133, // Putney coordinates
-                trialTime: "Sundays @ 8:00 AM", price: "£15",
+                lat: 51.4668, lng: -0.2133, trialTime: "Sundays @ 8:00 AM", price: "£15",
                 bring: "Tight-fitting athletic gear, water bottle.", location: "Putney Embankment",
                 description: "Always wanted to try rowing but felt intimidated? Our beginner squads are specifically designed for zero-experience adults. It's a fantastic full-body workout and a supportive team environment."
             },
             {
                 name: "Downtown Padel Social", sport: "Padel", city: "Amsterdam", category: "Mixed",
-                lat: 52.3390, lng: 4.8731, // Amsterdam Zuid coordinates
-                trialTime: "Tuesdays @ 6:30 PM", price: "€12",
+                lat: 52.3390, lng: 4.8731, trialTime: "Tuesdays @ 6:30 PM", price: "€12",
                 bring: "Just sportswear. We provide the rackets!", location: "Amsterdam Zuid Padel Club",
                 description: "Padel is the fastest growing sport in the world for a reason—it's incredibly easy to pick up! We host weekly beginner sessions followed by drinks at the clubhouse. Perfect for making new friends."
             }
         ];
 
-        // City Coordinates for Dropdown Zoom
         const cityCoords = {
             "Global": [30, 0],
             "Los Angeles": [34.0522, -118.2437],
@@ -90,18 +96,17 @@
         const map = L.map('map', { zoomControl: false }).setView([30, 0], 2);
         L.control.zoom({ position: 'bottomleft' }).addTo(map);
         
-        // Add OpenStreetMap tiles
         L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+            attribution: '&copy; OpenStreetMap contributors',
             subdomains: 'abcd',
             maxZoom: 20
         }).addTo(map);
 
         // Panel Elements
         const sidePanel = document.getElementById('sidePanel');
+        const emptyState = document.getElementById('emptyState');
         const panelContent = document.getElementById('panelContent');
         const closePanelBtn = document.getElementById('closePanel');
-        let activeMarker = null;
 
         // Populate Map with Markers
         clubs.forEach(club => {
@@ -109,13 +114,19 @@
             
             marker.on('click', () => {
                 openPanel(club);
-                map.flyTo([club.lat, club.lng], 14, { duration: 1 }); // Zoom to pin
+                map.flyTo([club.lat, club.lng], 14, { duration: 1 }); 
             });
         });
 
         // Open Side Panel Logic
         function openPanel(club) {
+            // Mobile: slide in
             sidePanel.classList.remove('translate-x-full');
+            
+            // Toggle Views
+            emptyState.classList.add('hidden');
+            closePanelBtn.classList.remove('hidden');
+            panelContent.classList.remove('hidden');
             
             panelContent.innerHTML = `
                 <div class="h-64 relative video-placeholder flex items-center justify-center cursor-pointer group">
@@ -148,17 +159,26 @@
             `;
         }
 
-        // Close Panel Logic
-        closePanelBtn.addEventListener('click', () => {
+        // Close/Reset Panel Logic
+        function resetPanel() {
+            // Mobile: slide out
             sidePanel.classList.add('translate-x-full');
-        });
+            
+            // Toggle Views back to default
+            emptyState.classList.remove('hidden');
+            closePanelBtn.classList.add('hidden');
+            panelContent.classList.add('hidden');
+            panelContent.innerHTML = '';
+        }
+
+        closePanelBtn.addEventListener('click', resetPanel);
 
         // City Filter Dropdown Logic
         document.getElementById('cityFilter').addEventListener('change', (e) => {
             const city = e.target.value;
             const zoomLevel = city === "Global" ? 2 : 11;
             map.flyTo(cityCoords[city], zoomLevel, { duration: 1.5 });
-            sidePanel.classList.add('translate-x-full'); // Hide panel on filter change
+            resetPanel(); 
         });
     </script>
 </body>
