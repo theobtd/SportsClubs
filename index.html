@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PlayLocal | Discover Amateur Sports</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .video-placeholder { background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('https://images.unsplash.com/photo-1526232761682-d26e03ac148e?auto=format&fit=crop&w=600&q=80') center/cover; }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-extrabold text-indigo-600">PlayLocal 🏆</h1>
+            <select id="cityFilter" class="bg-slate-100 border-none rounded-lg px-4 py-2 font-semibold cursor-pointer outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="All">All Cities</option>
+                <option value="Los Angeles">Los Angeles</option>
+                <option value="New York City">New York City</option>
+                <option value="London">London</option>
+                <option value="Amsterdam">Amsterdam</option>
+                <option value="Hong Kong">Hong Kong</option>
+                <option value="Sydney">Sydney</option>
+            </select>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="max-w-7xl mx-auto px-4 py-12 text-center">
+        <h2 class="text-4xl md:text-5xl font-extrabold mb-4">Find your team. <br/><span class="text-indigo-600">No experience needed.</span></h2>
+        <p class="text-lg text-slate-500 max-w-2xl mx-auto">Discover beginner-friendly amateur sports clubs in your city. Watch their intro videos, see what to bring, and book your first trial class today.</p>
+    </section>
+
+    <!-- Clubs Grid -->
+    <main class="max-w-7xl mx-auto px-4 pb-20">
+        <div id="clubsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <!-- Cards will be injected here via JavaScript -->
+        </div>
+    </main>
+
+    <!-- Application Logic -->
+    <script>
+        // Mock Database
+        const clubs = [
+            {
+                name: "Sunset Beach Volleyball",
+                sport: "Beach Volleyball",
+                city: "Los Angeles",
+                category: "Mixed",
+                trialTime: "Saturdays @ 10:00 AM",
+                price: "$10",
+                bring: "Water, sunglasses, and good vibes.",
+                location: "Santa Monica Pier (South Side)",
+                description: "We are a super casual group of young professionals who love to start the weekend with some sand and sun. Don't know the rules? No problem, we'll teach you! Afterwards, we usually grab smoothies nearby.",
+            },
+            {
+                name: "Thames Rowing Club (Beginners)",
+                sport: "Rowing",
+                city: "London",
+                category: "Womens",
+                trialTime: "Sundays @ 8:00 AM",
+                price: "£15",
+                bring: "Tight-fitting athletic gear, water bottle.",
+                location: "Putney Embankment",
+                description: "Always wanted to try rowing but felt intimidated? Our beginner squads are specifically designed for zero-experience adults. It's a fantastic full-body workout and a highly supportive team environment.",
+            },
+            {
+                name: "Downtown Padel Social",
+                sport: "Padel",
+                city: "Amsterdam",
+                category: "Mixed",
+                trialTime: "Tuesdays @ 6:30 PM",
+                price: "€12",
+                bring: "Just sportswear. We provide the rackets!",
+                location: "Amsterdam Zuid Padel Club",
+                description: "Padel is the fastest growing sport in the world for a reason—it's incredibly easy to pick up! We host weekly beginner sessions followed by drinks at the clubhouse. Perfect for making new friends.",
+            }
+        ];
+
+        const container = document.getElementById('clubsContainer');
+        const cityFilter = document.getElementById('cityFilter');
+
+        function renderClubs(filterCity = 'All') {
+            container.innerHTML = '';
+            
+            const filteredClubs = clubs.filter(club => filterCity === 'All' || club.city === filterCity);
+
+            filteredClubs.forEach(club => {
+                const card = document.createElement('div');
+                card.className = "bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow overflow-hidden border border-slate-100 flex flex-col";
+                
+                card.innerHTML = `
+                    <div class="h-48 relative video-placeholder flex items-center justify-center cursor-pointer group">
+                        <!-- Play Button Graphic -->
+                        <div class="w-14 h-14 bg-white/90 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                            <svg class="w-6 h-6 text-indigo-600 ml-1" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4l12 6-12 6z"></path></svg>
+                        </div>
+                        <span class="absolute bottom-3 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded font-semibold">0:30</span>
+                    </div>
+                    
+                    <div class="p-6 flex-1 flex flex-col">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider">${club.sport} • ${club.category}</span>
+                            <span class="text-sm font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded">${club.price}</span>
+                        </div>
+                        <h3 class="text-xl font-extrabold mb-1">${club.name}</h3>
+                        <p class="text-slate-500 text-sm mb-4">📍 ${club.location}, ${club.city}</p>
+                        
+                        <p class="text-slate-600 text-sm mb-4 flex-1">${club.description}</p>
+                        
+                        <div class="bg-slate-50 p-4 rounded-xl mb-6">
+                            <p class="text-sm font-semibold mb-1">🗓️ Next Intro: <span class="font-normal">${club.trialTime}</span></p>
+                            <p class="text-sm font-semibold">🎒 Bring: <span class="font-normal">${club.bring}</span></p>
+                        </div>
+                        
+                        <button class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-xl transition-colors">
+                            Book Intro Session
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Initial render
+        renderClubs();
+
+        // Listen for filter changes
+        cityFilter.addEventListener('change', (e) => {
+            renderClubs(e.target.value);
+        });
+    </script>
+</body>
+</html>
