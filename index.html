@@ -23,12 +23,15 @@
             <h1 class="text-2xl font-extrabold text-indigo-600">PlayLocal 🏆</h1>
             
             <!-- Filter Controls -->
-            <div class="flex space-x-3">
+            <div class="flex space-x-3 items-center">
+                
+                <!-- Sport Filter -->
                 <select id="sportFilter" class="bg-slate-100 border-none rounded-lg px-3 py-2 font-semibold text-sm md:text-base cursor-pointer outline-none focus:ring-2 focus:ring-indigo-500">
                     <option value="All">All Sports</option>
                     <!-- Options injected via JS -->
                 </select>
 
+                <!-- City Filter -->
                 <select id="cityFilter" class="bg-slate-100 border-none rounded-lg px-3 py-2 font-semibold text-sm md:text-base cursor-pointer outline-none focus:ring-2 focus:ring-indigo-500">
                     <option value="Global">Global View</option>
                     <option value="Los Angeles">Los Angeles</option>
@@ -36,6 +39,57 @@
                     <option value="Amsterdam">Amsterdam</option>
                     <option value="Hong Kong">Hong Kong</option>
                 </select>
+
+                <!-- Days Filter -->
+                <details class="relative">
+                    <summary class="bg-slate-100 border-none rounded-lg px-3 py-2 font-semibold text-sm md:text-base cursor-pointer outline-none focus:ring-2 focus:ring-indigo-500 list-none [&::-webkit-details-marker]:hidden flex items-center select-none">
+                        Days ▾
+                    </summary>
+                    <div class="absolute right-0 top-full mt-2 bg-white shadow-xl rounded-lg p-3 min-w-[150px] border border-slate-100 z-50">
+                        <label class="flex items-center space-x-2 py-1.5 cursor-pointer hover:bg-slate-50 px-2 rounded">
+                            <input type="checkbox" value="Saturday" class="day-cb w-4 h-4 text-indigo-600 rounded border-gray-300">
+                            <span class="text-sm font-medium">Saturday</span>
+                        </label>
+                        <label class="flex items-center space-x-2 py-1.5 cursor-pointer hover:bg-slate-50 px-2 rounded">
+                            <input type="checkbox" value="Sunday" class="day-cb w-4 h-4 text-indigo-600 rounded border-gray-300">
+                            <span class="text-sm font-medium">Sunday</span>
+                        </label>
+                        <label class="flex items-center space-x-2 py-1.5 cursor-pointer hover:bg-slate-50 px-2 rounded">
+                            <input type="checkbox" value="Tuesday" class="day-cb w-4 h-4 text-indigo-600 rounded border-gray-300">
+                            <span class="text-sm font-medium">Tuesday</span>
+                        </label>
+                        <label class="flex items-center space-x-2 py-1.5 cursor-pointer hover:bg-slate-50 px-2 rounded">
+                            <input type="checkbox" value="Thursday" class="day-cb w-4 h-4 text-indigo-600 rounded border-gray-300">
+                            <span class="text-sm font-medium">Thursday</span>
+                        </label>
+                    </div>
+                </details>
+
+                <!-- Times Filter -->
+                <details class="relative">
+                    <summary class="bg-slate-100 border-none rounded-lg px-3 py-2 font-semibold text-sm md:text-base cursor-pointer outline-none focus:ring-2 focus:ring-indigo-500 list-none [&::-webkit-details-marker]:hidden flex items-center select-none">
+                        Times ▾
+                    </summary>
+                    <div class="absolute right-0 top-full mt-2 bg-white shadow-xl rounded-lg p-3 min-w-[150px] border border-slate-100 z-50">
+                        <label class="flex items-center space-x-2 py-1.5 cursor-pointer hover:bg-slate-50 px-2 rounded">
+                            <input type="checkbox" value="09:00 AM" class="time-cb w-4 h-4 text-indigo-600 rounded border-gray-300">
+                            <span class="text-sm font-medium">09:00 AM</span>
+                        </label>
+                        <label class="flex items-center space-x-2 py-1.5 cursor-pointer hover:bg-slate-50 px-2 rounded">
+                            <input type="checkbox" value="10:00 AM" class="time-cb w-4 h-4 text-indigo-600 rounded border-gray-300">
+                            <span class="text-sm font-medium">10:00 AM</span>
+                        </label>
+                        <label class="flex items-center space-x-2 py-1.5 cursor-pointer hover:bg-slate-50 px-2 rounded">
+                            <input type="checkbox" value="06:30 PM" class="time-cb w-4 h-4 text-indigo-600 rounded border-gray-300">
+                            <span class="text-sm font-medium">06:30 PM</span>
+                        </label>
+                        <label class="flex items-center space-x-2 py-1.5 cursor-pointer hover:bg-slate-50 px-2 rounded">
+                            <input type="checkbox" value="07:00 PM" class="time-cb w-4 h-4 text-indigo-600 rounded border-gray-300">
+                            <span class="text-sm font-medium">07:00 PM</span>
+                        </label>
+                    </div>
+                </details>
+                
             </div>
         </div>
     </header>
@@ -103,6 +157,10 @@
             const sports = Object.keys(sportColors);
             const suffixes = ["Social", "Collective", "Club", "Beginners", "Academy", "Crew"];
             
+            // Available Days and Times
+            const trialDays = ["Saturday", "Sunday", "Tuesday", "Thursday"];
+            const trialTimes = ["09:00 AM", "10:00 AM", "06:30 PM", "07:00 PM"];
+            
             Object.keys(citiesData).forEach(cityName => {
                 const city = citiesData[cityName];
                 for (let i = 0; i < 15; i++) {
@@ -110,6 +168,9 @@
                     const hood = city.hoods[Math.floor(Math.random() * city.hoods.length)];
                     const suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
                     
+                    const day = trialDays[Math.floor(Math.random() * trialDays.length)];
+                    const time = trialTimes[Math.floor(Math.random() * trialTimes.length)];
+
                     // Scatter pins randomly within ~5-10km of the city center
                     const latOffset = (Math.random() - 0.5) * 0.15;
                     const lngOffset = (Math.random() - 0.5) * 0.15;
@@ -121,7 +182,9 @@
                         category: ["Mixed", "Womens", "Mens"][Math.floor(Math.random() * 3)],
                         lat: city.lat + latOffset,
                         lng: city.lng + lngOffset,
-                        trialTime: ["Saturdays @ 10:00 AM", "Sundays @ 9:00 AM", "Tuesdays @ 6:30 PM", "Thursdays @ 7:00 PM"][Math.floor(Math.random() * 4)],
+                        day: day,
+                        time: time,
+                        trialTime: `${day}s @ ${time}`,
                         price: ["$10", "£8", "€12", "$15", "Free"][Math.floor(Math.random() * 5)],
                         bring: "Comfortable athletic wear, a water bottle, and good vibes. All equipment is provided!",
                         location: `${hood} Community Grounds`,
@@ -169,12 +232,20 @@
             
             const selectedCity = document.getElementById('cityFilter').value;
             const selectedSport = document.getElementById('sportFilter').value;
+            
+            // Gather selected multiple checkboxes
+            const selectedDays = Array.from(document.querySelectorAll('.day-cb:checked')).map(cb => cb.value);
+            const selectedTimes = Array.from(document.querySelectorAll('.time-cb:checked')).map(cb => cb.value);
 
             clubs.forEach(club => {
                 const matchesCity = selectedCity === "Global" || club.city === selectedCity;
                 const matchesSport = selectedSport === "All" || club.sport === selectedSport;
+                
+                // If the array is empty, the user hasn't filtered by day/time, so show all
+                const matchesDay = selectedDays.length === 0 || selectedDays.includes(club.day);
+                const matchesTime = selectedTimes.length === 0 || selectedTimes.includes(club.time);
 
-                if (matchesCity && matchesSport) {
+                if (matchesCity && matchesSport && matchesDay && matchesTime) {
                     const dotColor = sportColors[club.sport];
                     
                     const marker = L.circleMarker([club.lat, club.lng], {
@@ -238,6 +309,14 @@
             panelContent.classList.add('hidden');
             panelContent.innerHTML = '';
         }
+
+        // Add event listeners to the new checkboxes to re-render the map when changed
+        document.querySelectorAll('.day-cb, .time-cb').forEach(cb => {
+            cb.addEventListener('change', () => {
+                resetPanel();
+                renderMarkers();
+            });
+        });
 
         closePanelBtn.addEventListener('click', resetPanel);
 
