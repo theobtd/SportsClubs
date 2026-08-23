@@ -73,7 +73,13 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label class="block text-sm font-bold text-slate-700 mb-2">City *</label>
-                        <input type="text" id="city" required class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <select id="city" required class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="">Select a city...</option>
+                            <option value="Hong Kong">Hong Kong</option>
+                            <option value="Amsterdam">Amsterdam</option>
+                            <option value="London">London</option>
+                            <option value="New York City">New York City</option>
+                        </select>
                     </div>
                     <div>
                         <label class="block text-sm font-bold text-slate-700 mb-2">Venue Location *</label>
@@ -110,7 +116,9 @@
                     </div>
                     <div>
                         <label class="block text-sm font-bold text-slate-700 mb-2">Time *</label>
-                        <input type="text" id="time" required class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <select id="time" required class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="">Select a time...</option>
+                        </select>
                     </div>
                 </div>
 
@@ -170,6 +178,8 @@
         });
 
         // --- FORM LOGIC ---
+        
+        // Populate Sports List
         const sportsList = [
             "Touch Rugby", "Rugby", "Soccer", "Lacrosse", "Volleyball", 
             "Beach Volleyball", "Field Hockey", "Padel", "Tennis", "Squash", 
@@ -183,6 +193,20 @@
             option.textContent = sport;
             sportSelect.appendChild(option);
         });
+
+        // Populate Time List (6:00 AM to 10:30 PM)
+        const timeSelect = document.getElementById('time');
+        for (let hour = 6; hour <= 22; hour++) {
+            ['00', '30'].forEach(minute => {
+                const displayHour = hour > 12 ? hour - 12 : (hour === 0 ? 12 : hour);
+                const ampm = hour >= 12 ? 'PM' : 'AM';
+                const timeString = `${displayHour}:${minute} ${ampm}`;
+                const option = document.createElement('option');
+                option.value = timeString;
+                option.textContent = timeString;
+                timeSelect.appendChild(option);
+            });
+        }
 
         const form = document.getElementById('addClubForm');
         const submitBtn = document.getElementById('submitBtn');
@@ -208,12 +232,12 @@
                 sport: document.getElementById('sport').value,
                 category: document.getElementById('category').value,
                 price: document.getElementById('price').value.trim(),
-                city: document.getElementById('city').value.trim(),
+                city: document.getElementById('city').value,
                 location: document.getElementById('location').value.trim(),
                 lat: parseFloat(document.getElementById('lat').value),
                 lng: parseFloat(document.getElementById('lng').value),
                 day: document.getElementById('day').value,
-                time: document.getElementById('time').value.trim(),
+                time: document.getElementById('time').value,
                 trialTime: document.getElementById('trialTime').value.trim(),
                 bring: document.getElementById('bring').value.trim(),
                 description: document.getElementById('description').value.trim()
