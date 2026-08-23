@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
-    <!-- Firebase SDKs (Compat version as used in your previous example) -->
+    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
 
@@ -145,7 +145,6 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // Global state for clubs
         let clubs = [];
 
         // 2. Configuration & Styling
@@ -166,8 +165,6 @@
             "Hong Kong": [22.3193, 114.1694]
         };
 
-        // 3. Initialize UI & Map
-        
         // Populate Sport Dropdown
         const sportFilter = document.getElementById('sportFilter');
         Object.keys(sportColors).forEach(sport => {
@@ -189,33 +186,27 @@
 
         const markersGroup = L.layerGroup().addTo(map);
 
-        // Panel Elements
         const sidePanel = document.getElementById('sidePanel');
         const emptyState = document.getElementById('emptyState');
         const panelContent = document.getElementById('panelContent');
         const closePanelBtn = document.getElementById('closePanel');
 
-        // 4. Render & Interaction Logic
         function renderMarkers() {
             markersGroup.clearLayers();
             
             const selectedCity = document.getElementById('cityFilter').value;
             const selectedSport = document.getElementById('sportFilter').value;
             
-            // Gather selected multiple checkboxes
             const selectedDays = Array.from(document.querySelectorAll('.day-cb:checked')).map(cb => cb.value);
             const selectedTimes = Array.from(document.querySelectorAll('.time-cb:checked')).map(cb => cb.value);
 
             clubs.forEach(club => {
                 const matchesCity = selectedCity === "Global" || club.city === selectedCity;
                 const matchesSport = selectedSport === "All" || club.sport === selectedSport;
-                
-                // If the array is empty, the user hasn't filtered by day/time, so show all
                 const matchesDay = selectedDays.length === 0 || selectedDays.includes(club.day);
                 const matchesTime = selectedTimes.length === 0 || selectedTimes.includes(club.time);
 
                 if (matchesCity && matchesSport && matchesDay && matchesTime) {
-                    // Fallback to a default color if sport doesn't match list
                     const dotColor = sportColors[club.sport] || "#333333";
                     
                     const marker = L.circleMarker([club.lat, club.lng], {
@@ -243,13 +234,30 @@
             
             const dotColor = sportColors[club.sport] || "#333333";
 
-            panelContent.innerHTML = `
-                <div class="h-64 relative video-placeholder flex items-center justify-center cursor-pointer group">
-                    <div class="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
-                        <svg class="w-8 h-8 text-indigo-600 ml-1" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4l12 6-12 6z"></path></svg>
+            // Determine Media HTML (Video takes precedence, then Image, then fallback placeholder)
+            let mediaHtml = '';
+            if (club.videoUrl && club.videoUrl.trim() !== '') {
+                mediaHtml = `
+                    <div class="h-64 relative bg-black">
+                        <video src="${club.videoUrl}" controls class="w-full h-full object-cover"></video>
                     </div>
-                    <span class="absolute bottom-3 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded font-semibold">0:30</span>
-                </div>
+                `;
+            } else if (club.imageUrl && club.imageUrl.trim() !== '') {
+                mediaHtml = `
+                    <div class="h-64 relative bg-slate-100">
+                        <img src="${club.imageUrl}" alt="${club.name}" class="w-full h-full object-cover">
+                    </div>
+                `;
+            } else {
+                mediaHtml = `
+                    <div class="h-64 relative video-placeholder flex items-center justify-center">
+                        <span class="absolute bottom-3 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded font-semibold">PlayLocal</span>
+                    </div>
+                `;
+            }
+
+            panelContent.innerHTML = `
+                ${mediaHtml}
                 
                 <div class="p-6">
                     <div class="flex justify-between items-start mb-3">
@@ -305,15 +313,11 @@
             renderMarkers(); 
         });
 
-        // 5. Fetch Data from Firebase and trigger initial render
+        // Fetch Data from Firebase
         async function fetchClubs() {
             try {
                 const snapshot = await db.collection('clubs').get();
                 
-                if (snapshot.empty) {
-                    console.warn("No clubs found in Firebase. Add documents to the 'clubs' collection.");
-                }
-
                 clubs = snapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()
@@ -325,9 +329,7 @@
             }
         }
 
-        // Kick off application
         fetchClubs();
-
     </script>
 </body>
 </html>
