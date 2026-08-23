@@ -7,6 +7,11 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Firebase SDKs (Compat version as used in your previous example) -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap');
         body { font-family: 'Inter', sans-serif; }
@@ -126,7 +131,24 @@
 
     <!-- Application Logic -->
     <script>
-        // 1. Configuration & Styling
+        // 1. Firebase Initialization
+        const firebaseConfig = {
+            apiKey: "AIzaSyAs4CT_5LESnO8JQUAMBx1wqt9k21eL3oY",
+            authDomain: "sportsclubs-986c3.firebaseapp.com",
+            projectId: "sportsclubs-986c3",
+            storageBucket: "sportsclubs-986c3.firebasestorage.app",
+            messagingSenderId: "998457987275",
+            appId: "1:998457987275:web:f926a0fe0339633e1acb4e",
+            measurementId: "G-SQJ7H4JYK2"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Global state for clubs
+        let clubs = [];
+
+        // 2. Configuration & Styling
         const sportColors = {
             "Touch Rugby": "#d946ef", "Rugby": "#8b5cf6", "Soccer": "#ef4444", 
             "Lacrosse": "#f97316", "Volleyball": "#facc15", "Beach Volleyball": "#eab308", 
@@ -143,59 +165,6 @@
             "Amsterdam": [52.3676, 4.9041],
             "Hong Kong": [22.3193, 114.1694]
         };
-
-        // 2. Mock Data Generator (Creates 15 clubs per city)
-        const generateMockClubs = () => {
-            const generated = [];
-            const citiesData = {
-                "Los Angeles": { lat: 34.0522, lng: -118.2437, hoods: ["Santa Monica", "Silver Lake", "Downtown", "Echo Park", "Venice Beach"] },
-                "London": { lat: 51.5074, lng: -0.1278, hoods: ["Clapham", "Hyde Park", "Hackney", "Battersea", "Regent's Park"] },
-                "Amsterdam": { lat: 52.3676, lng: 4.9041, hoods: ["Vondelpark", "De Pijp", "Oud-West", "Zuidas", "Noord"] },
-                "Hong Kong": { lat: 22.3193, lng: 114.1694, hoods: ["Happy Valley", "Victoria Park", "Kowloon", "Repulse Bay", "Wan Chai"] }
-            };
-
-            const sports = Object.keys(sportColors);
-            const suffixes = ["Social", "Collective", "Club", "Beginners", "Academy", "Crew"];
-            
-            // Available Days and Times
-            const trialDays = ["Saturday", "Sunday", "Tuesday", "Thursday"];
-            const trialTimes = ["09:00 AM", "10:00 AM", "06:30 PM", "07:00 PM"];
-            
-            Object.keys(citiesData).forEach(cityName => {
-                const city = citiesData[cityName];
-                for (let i = 0; i < 15; i++) {
-                    const sport = sports[Math.floor(Math.random() * sports.length)];
-                    const hood = city.hoods[Math.floor(Math.random() * city.hoods.length)];
-                    const suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
-                    
-                    const day = trialDays[Math.floor(Math.random() * trialDays.length)];
-                    const time = trialTimes[Math.floor(Math.random() * trialTimes.length)];
-
-                    // Scatter pins randomly within ~5-10km of the city center
-                    const latOffset = (Math.random() - 0.5) * 0.15;
-                    const lngOffset = (Math.random() - 0.5) * 0.15;
-
-                    generated.push({
-                        name: `${hood} ${sport} ${suffix}`,
-                        sport: sport,
-                        city: cityName,
-                        category: ["Mixed", "Womens", "Mens"][Math.floor(Math.random() * 3)],
-                        lat: city.lat + latOffset,
-                        lng: city.lng + lngOffset,
-                        day: day,
-                        time: time,
-                        trialTime: `${day}s @ ${time}`,
-                        price: ["$10", "£8", "€12", "$15", "Free"][Math.floor(Math.random() * 5)],
-                        bring: "Comfortable athletic wear, a water bottle, and good vibes. All equipment is provided!",
-                        location: `${hood} Community Grounds`,
-                        description: `Always wanted to try ${sport} but felt intimidated? Our beginner group in ${hood} is specifically designed for zero-experience adults. It's a fantastic workout and a highly supportive team environment. We focus on fun, learning the basics, and we usually grab drinks or food together after the session!`
-                    });
-                }
-            });
-            return generated;
-        };
-
-        const clubs = generateMockClubs();
 
         // 3. Initialize UI & Map
         
@@ -246,7 +215,8 @@
                 const matchesTime = selectedTimes.length === 0 || selectedTimes.includes(club.time);
 
                 if (matchesCity && matchesSport && matchesDay && matchesTime) {
-                    const dotColor = sportColors[club.sport];
+                    // Fallback to a default color if sport doesn't match list
+                    const dotColor = sportColors[club.sport] || "#333333";
                     
                     const marker = L.circleMarker([club.lat, club.lng], {
                         radius: 10,
@@ -271,6 +241,8 @@
             closePanelBtn.classList.remove('hidden');
             panelContent.classList.remove('hidden');
             
+            const dotColor = sportColors[club.sport] || "#333333";
+
             panelContent.innerHTML = `
                 <div class="h-64 relative video-placeholder flex items-center justify-center cursor-pointer group">
                     <div class="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
@@ -281,7 +253,7 @@
                 
                 <div class="p-6">
                     <div class="flex justify-between items-start mb-3">
-                        <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider" style="color: ${sportColors[club.sport]}">${club.sport} • ${club.category}</span>
+                        <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider" style="color: ${dotColor}">${club.sport} • ${club.category}</span>
                         <span class="text-sm font-bold bg-green-100 text-green-700 px-3 py-1 rounded-full">${club.price}</span>
                     </div>
                     <h2 class="text-2xl font-extrabold mb-2">${club.name}</h2>
@@ -310,7 +282,7 @@
             panelContent.innerHTML = '';
         }
 
-        // Add event listeners to the new checkboxes to re-render the map when changed
+        // Event listeners
         document.querySelectorAll('.day-cb, .time-cb').forEach(cb => {
             cb.addEventListener('change', () => {
                 resetPanel();
@@ -333,8 +305,29 @@
             renderMarkers(); 
         });
 
-        // Initial render
-        renderMarkers();
+        // 5. Fetch Data from Firebase and trigger initial render
+        async function fetchClubs() {
+            try {
+                const snapshot = await db.collection('clubs').get();
+                
+                if (snapshot.empty) {
+                    console.warn("No clubs found in Firebase. Add documents to the 'clubs' collection.");
+                }
+
+                clubs = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                
+                renderMarkers();
+            } catch (error) {
+                console.error("Error fetching clubs from Firebase: ", error);
+            }
+        }
+
+        // Kick off application
+        fetchClubs();
+
     </script>
 </body>
 </html>
