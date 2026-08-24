@@ -233,29 +233,51 @@
             panelContent.classList.remove('hidden');
             
             const dotColor = sportColors[club.sport] || "#333333";
-
-            // Determine Media HTML (Video takes precedence, then Image, then fallback placeholder)
+        
+            const hasVideo = club.videoUrl && club.videoUrl.trim() !== '';
+            const hasImage = club.imageUrl && club.imageUrl.trim() !== '';
+        
+            // Determine Media HTML
             let mediaHtml = '';
-            if (club.videoUrl && club.videoUrl.trim() !== '') {
+            
+            if (hasVideo && hasImage) {
+                // Both exist: Render the Thumbnail Facade
+                mediaHtml = `
+                    <div id="video-facade" class="h-64 relative bg-slate-100 group cursor-pointer overflow-hidden">
+                        <img src="${club.imageUrl}" alt="${club.name}" class="w-full h-full object-cover">
+                        <!-- Play Button Overlay -->
+                        <div class="absolute inset-0 bg-black/30 flex items-center justify-center transition-all group-hover:bg-black/40">
+                            <div class="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform duration-200">
+                                <svg class="w-8 h-8 text-indigo-600 ml-1" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M8 5v14l11-7z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (hasVideo) {
+                // Only Video
                 mediaHtml = `
                     <div class="h-64 relative bg-black">
                         <video src="${club.videoUrl}" controls class="w-full h-full object-cover"></video>
                     </div>
                 `;
-            } else if (club.imageUrl && club.imageUrl.trim() !== '') {
+            } else if (hasImage) {
+                // Only Image
                 mediaHtml = `
                     <div class="h-64 relative bg-slate-100">
                         <img src="${club.imageUrl}" alt="${club.name}" class="w-full h-full object-cover">
                     </div>
                 `;
             } else {
+                // Neither (Placeholder)
                 mediaHtml = `
                     <div class="h-64 relative video-placeholder flex items-center justify-center">
                         <span class="absolute bottom-3 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded font-semibold">PlayLocal</span>
                     </div>
                 `;
             }
-
+        
             panelContent.innerHTML = `
                 ${mediaHtml}
                 
@@ -280,6 +302,21 @@
                     </button>
                 </div>
             `;
+        
+            // Add event listener to swap facade with actual video
+            if (hasVideo && hasImage) {
+                const facade = document.getElementById('video-facade');
+                if (facade) {
+                    facade.addEventListener('click', function() {
+                        // Notice the 'autoplay' attribute so it starts immediately upon clicking
+                        this.outerHTML = `
+                            <div class="h-64 relative bg-black">
+                                <video src="${club.videoUrl}" controls autoplay class="w-full h-full object-cover"></video>
+                            </div>
+                        `;
+                    });
+                }
+            }
         }
 
         function resetPanel() {
