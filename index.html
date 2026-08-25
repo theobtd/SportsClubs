@@ -36,15 +36,6 @@
                     <!-- Options injected via JS -->
                 </select>
 
-                <!-- City Filter -->
-                <select id="cityFilter" class="bg-slate-100 border-none rounded-lg px-3 py-2 font-semibold text-sm md:text-base cursor-pointer outline-none focus:ring-2 focus:ring-indigo-500">
-                    <option value="Global">Global View</option>
-                    <option value="Los Angeles">Los Angeles</option>
-                    <option value="London">London</option>
-                    <option value="Amsterdam">Amsterdam</option>
-                    <option value="Hong Kong">Hong Kong</option>
-                </select>
-
                 <!-- Days Filter -->
                 <details class="relative">
                     <summary class="bg-slate-100 border-none rounded-lg px-3 py-2 font-semibold text-sm md:text-base cursor-pointer outline-none focus:ring-2 focus:ring-indigo-500 list-none [&::-webkit-details-marker]:hidden flex items-center select-none">
@@ -116,7 +107,7 @@
             <!-- Default Empty State -->
             <div id="emptyState" class="flex-1 flex flex-col items-center justify-center p-8 text-center bg-gradient-to-br from-slate-50 to-indigo-50/50">
                 <h2 class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-teal-500 mb-4 leading-tight tracking-tight">
-                    Your city is your playground.
+                    Hong Kong is your playground.
                 </h2>
                 <p class="text-slate-500 font-medium text-lg">
                     Tap a pin on the map to find your team.
@@ -157,14 +148,6 @@
             "AFL": "#64748b"
         };
 
-        const cityCoords = {
-            "Global": [30, 0],
-            "Los Angeles": [34.0522, -118.2437],
-            "London": [51.5074, -0.1278],
-            "Amsterdam": [52.3676, 4.9041],
-            "Hong Kong": [22.3193, 114.1694]
-        };
-
         // Populate Sport Dropdown
         const sportFilter = document.getElementById('sportFilter');
         Object.keys(sportColors).forEach(sport => {
@@ -174,8 +157,8 @@
             sportFilter.appendChild(option);
         });
 
-        // Initialize Map
-        const map = L.map('map', { zoomControl: false }).setView([30, 0], 2);
+        // Initialize Map directly zoomed into Hong Kong
+        const map = L.map('map', { zoomControl: false }).setView([22.3193, 114.1694], 11);
         L.control.zoom({ position: 'bottomleft' }).addTo(map);
         
         L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
@@ -194,14 +177,14 @@
         function renderMarkers() {
             markersGroup.clearLayers();
             
-            const selectedCity = document.getElementById('cityFilter').value;
             const selectedSport = document.getElementById('sportFilter').value;
             
             const selectedDays = Array.from(document.querySelectorAll('.day-cb:checked')).map(cb => cb.value);
             const selectedTimes = Array.from(document.querySelectorAll('.time-cb:checked')).map(cb => cb.value);
 
             clubs.forEach(club => {
-                const matchesCity = selectedCity === "Global" || club.city === selectedCity;
+                // Hardcoded to only render if the club is based in Hong Kong
+                const matchesCity = club.city === "Hong Kong";
                 const matchesSport = selectedSport === "All" || club.sport === selectedSport;
                 const matchesDay = selectedDays.length === 0 || selectedDays.includes(club.day);
                 const matchesTime = selectedTimes.length === 0 || selectedTimes.includes(club.time);
@@ -336,14 +319,6 @@
         });
 
         closePanelBtn.addEventListener('click', resetPanel);
-
-        document.getElementById('cityFilter').addEventListener('change', (e) => {
-            const city = e.target.value;
-            const zoomLevel = city === "Global" ? 2 : 11;
-            map.flyTo(cityCoords[city], zoomLevel, { duration: 1.5 });
-            resetPanel(); 
-            renderMarkers(); 
-        });
 
         document.getElementById('sportFilter').addEventListener('change', () => {
             resetPanel();
