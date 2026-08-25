@@ -64,7 +64,14 @@
                     </div>
                     <div>
                         <label class="block text-sm font-bold text-slate-700 mb-2">Price *</label>
-                        <input type="text" id="price" required class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <input type="text" id="price" required class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-200 disabled:text-slate-500 disabled:cursor-not-allowed transition-colors">
+                        
+                        <!-- Added Toggle for Free -->
+                        <label class="inline-flex items-center mt-3 cursor-pointer">
+                            <input type="checkbox" id="isFree" class="sr-only peer">
+                            <div class="relative w-9 h-5 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                            <span class="ml-2 text-sm font-medium text-slate-700">Set as Free</span>
+                        </label>
                     </div>
                 </div>
 
@@ -235,6 +242,21 @@
             });
         }
 
+        // --- PRICE TOGGLE LOGIC ---
+        const priceInput = document.getElementById('price');
+        const isFreeCheckbox = document.getElementById('isFree');
+
+        isFreeCheckbox.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                priceInput.value = 'Free';
+                priceInput.disabled = true;
+            } else {
+                priceInput.value = '';
+                priceInput.disabled = false;
+                priceInput.focus();
+            }
+        });
+
         const form = document.getElementById('addClubForm');
         const submitBtn = document.getElementById('submitBtn');
         const statusMessage = document.getElementById('statusMessage');
@@ -293,13 +315,14 @@
                     await Promise.all(uploadPromises);
                 }
 
-                // 3. Assemble the club data, including the new media URLs and Skill Level
+                // 3. Assemble the club data
                 const clubData = {
                     name: document.getElementById('name').value.trim(),
                     sport: document.getElementById('sport').value,
                     category: document.getElementById('category').value,
-                    price: document.getElementById('price').value.trim(),
-                    skillLevel: document.getElementById('skillLevel').value, // <-- Added here
+                    // Check if toggle is selected just to be extra safe, otherwise get trimmed value
+                    price: isFreeCheckbox.checked ? 'Free' : priceInput.value.trim(),
+                    skillLevel: document.getElementById('skillLevel').value,
                     city: document.getElementById('city').value,
                     location: document.getElementById('location').value.trim(),
                     lat: parseFloat(document.getElementById('lat').value),
@@ -317,7 +340,11 @@
                 await db.collection('clubs').add(clubData);
                 
                 showMessage('Success! Club and media added to the database.');
+                
+                // Form reset logic + reverting price input state
                 form.reset();
+                priceInput.disabled = false; // Re-enable in case the "Free" toggle was active
+
             } catch (error) {
                 console.error("Error adding document: ", error);
                 showMessage('Error saving club: ' + error.message, true);
