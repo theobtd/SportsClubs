@@ -36,6 +36,13 @@
                     <!-- Options injected via JS -->
                 </select>
 
+                <!-- Skill Level Filter -->
+                <select id="skillFilter" class="bg-slate-100 border-none rounded-lg px-3 py-2 font-semibold text-sm md:text-base cursor-pointer outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="Any">Any Skill Level</option>
+                    <option value="Beginner-friendly">Beginner-friendly</option>
+                    <option value="Intermediate and above">Intermediate and above</option>
+                </select>
+
                 <!-- Days Filter -->
                 <details class="relative">
                     <summary class="bg-slate-100 border-none rounded-lg px-3 py-2 font-semibold text-sm md:text-base cursor-pointer outline-none focus:ring-2 focus:ring-indigo-500 list-none [&::-webkit-details-marker]:hidden flex items-center select-none">
@@ -178,6 +185,7 @@
             markersGroup.clearLayers();
             
             const selectedSport = document.getElementById('sportFilter').value;
+            const selectedSkill = document.getElementById('skillFilter').value;
             
             const selectedDays = Array.from(document.querySelectorAll('.day-cb:checked')).map(cb => cb.value);
             const selectedTimes = Array.from(document.querySelectorAll('.time-cb:checked')).map(cb => cb.value);
@@ -186,10 +194,12 @@
                 // Hardcoded to only render if the club is based in Hong Kong
                 const matchesCity = club.city === "Hong Kong";
                 const matchesSport = selectedSport === "All" || club.sport === selectedSport;
+                // Check if the skill matches (assumes database field is `club.skillLevel`)
+                const matchesSkill = selectedSkill === "Any" || club.skillLevel === selectedSkill;
                 const matchesDay = selectedDays.length === 0 || selectedDays.includes(club.day);
                 const matchesTime = selectedTimes.length === 0 || selectedTimes.includes(club.time);
 
-                if (matchesCity && matchesSport && matchesDay && matchesTime) {
+                if (matchesCity && matchesSport && matchesSkill && matchesDay && matchesTime) {
                     const dotColor = sportColors[club.sport] || "#333333";
                     
                     const marker = L.circleMarker([club.lat, club.lng], {
@@ -278,6 +288,7 @@
                         <h4 class="font-bold text-indigo-900 mb-2">First Session Info</h4>
                         <p class="text-sm text-indigo-800 mb-2"><strong>🗓️ When:</strong> ${club.trialTime}</p>
                         <p class="text-sm text-indigo-800"><strong>🎒 Bring:</strong> ${club.bring}</p>
+                        <p class="text-sm text-indigo-800 mt-2"><strong>📊 Level:</strong> ${club.skillLevel || 'Any'}</p>
                     </div>
                     
                     <button class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 px-4 rounded-xl transition-colors shadow-md shadow-indigo-200">
@@ -291,7 +302,6 @@
                 const facade = document.getElementById('video-facade');
                 if (facade) {
                     facade.addEventListener('click', function() {
-                        // Notice the 'autoplay' attribute so it starts immediately upon clicking
                         this.outerHTML = `
                             <div class="h-64 relative bg-black">
                                 <video src="${club.videoUrl}" controls autoplay class="w-full h-full object-cover"></video>
@@ -321,6 +331,12 @@
         closePanelBtn.addEventListener('click', resetPanel);
 
         document.getElementById('sportFilter').addEventListener('change', () => {
+            resetPanel();
+            renderMarkers(); 
+        });
+
+        // Add event listener for the new skill filter
+        document.getElementById('skillFilter').addEventListener('change', () => {
             resetPanel();
             renderMarkers(); 
         });
