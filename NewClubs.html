@@ -75,7 +75,6 @@
                     </div>
                 </div>
 
-                <!-- Added Skill Level Field Here -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label class="block text-sm font-bold text-slate-700 mb-2">Skill Level *</label>
@@ -157,6 +156,38 @@
                 <div>
                     <label class="block text-sm font-bold text-slate-700 mb-2">Description</label>
                     <textarea id="description" rows="4" required class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                </div>
+
+                <hr class="border-slate-100">
+
+                <!-- Contact & Socials -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Website</label>
+                        <input type="url" id="website" placeholder="https://..." class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Email Address</label>
+                        <input type="email" id="email" placeholder="hello@club.com" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Phone Number</label>
+                        <input type="tel" id="phone" placeholder="+1 234 567 8900" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Instagram Link</label>
+                        <input type="url" id="instagram" placeholder="https://instagram.com/..." class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Facebook Page Link</label>
+                        <input type="url" id="facebook" placeholder="https://facebook.com/..." class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
                 </div>
 
                 <hr class="border-slate-100">
@@ -320,7 +351,6 @@
                     name: document.getElementById('name').value.trim(),
                     sport: document.getElementById('sport').value,
                     category: document.getElementById('category').value,
-                    // Check if toggle is selected just to be extra safe, otherwise get trimmed value
                     price: isFreeCheckbox.checked ? 'Free' : priceInput.value.trim(),
                     skillLevel: document.getElementById('skillLevel').value,
                     city: document.getElementById('city').value,
@@ -332,7 +362,15 @@
                     trialTime: document.getElementById('trialTime').value.trim(),
                     bring: document.getElementById('bring').value.trim(),
                     description: document.getElementById('description').value.trim(),
-                    imageUrl: imageUrl || '', // Save empty string if no file uploaded
+                    
+                    // Added Socials & Contact
+                    website: document.getElementById('website').value.trim(),
+                    email: document.getElementById('email').value.trim(),
+                    phone: document.getElementById('phone').value.trim(),
+                    instagram: document.getElementById('instagram').value.trim(),
+                    facebook: document.getElementById('facebook').value.trim(),
+
+                    imageUrl: imageUrl || '', 
                     videoUrl: videoUrl || ''
                 };
 
