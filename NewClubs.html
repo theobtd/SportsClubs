@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add New Club | PlayLocal</title>
+    <title>Manage Clubs | PlayLocal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- Firebase SDKs (Auth, Firestore, and Storage) -->
@@ -32,8 +32,21 @@
 
     <main class="max-w-3xl mx-auto px-4">
         <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-100">
-            <h2 class="text-2xl font-bold mb-2">Add a New Club</h2>
-            <p class="text-slate-500 mb-8">Fill out the details below to add a new sport club to the database.</p>
+            
+            <div class="flex flex-col md:flex-row md:items-center justify-between mb-6">
+                <div>
+                    <h2 id="formTitle" class="text-2xl font-bold mb-2">Add a New Club</h2>
+                    <p id="formSubtitle" class="text-slate-500">Fill out the details below to add a new sport club to the database.</p>
+                </div>
+                
+                <!-- NEW: Club Selector for Editing -->
+                <div class="mt-4 md:mt-0 md:w-64">
+                    <select id="clubSelector" class="w-full bg-slate-100 border border-slate-200 text-sm font-semibold rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors cursor-pointer">
+                        <option value="">+ Create New Club</option>
+                        <!-- Existing clubs will be loaded here -->
+                    </select>
+                </div>
+            </div>
 
             <div id="statusMessage" class="hidden mb-6 p-4 rounded-lg font-medium text-sm"></div>
 
@@ -66,7 +79,6 @@
                         <label class="block text-sm font-bold text-slate-700 mb-2">Price *</label>
                         <input type="text" id="price" required class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-200 disabled:text-slate-500 disabled:cursor-not-allowed transition-colors">
                         
-                        <!-- Added Toggle for Free -->
                         <label class="inline-flex items-center mt-3 cursor-pointer">
                             <input type="checkbox" id="isFree" class="sr-only peer">
                             <div class="relative w-9 h-5 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
@@ -197,12 +209,12 @@
                     <div>
                         <label class="block text-sm font-bold text-slate-700 mb-2">Club Thumbnail Image</label>
                         <input type="file" id="imageFile" accept="image/*" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
-                        <p class="text-xs text-slate-500 mt-1">Upload a clear photo to represent the club.</p>
+                        <p class="text-xs text-slate-500 mt-1 file-hint">Upload a clear photo to represent the club.</p>
                     </div>
                     <div>
                         <label class="block text-sm font-bold text-slate-700 mb-2">Presentation Video</label>
                         <input type="file" id="videoFile" accept="video/*" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
-                        <p class="text-xs text-slate-500 mt-1">Upload a short video showcasing the club.</p>
+                        <p class="text-xs text-slate-500 mt-1 file-hint">Upload a short video showcasing the club.</p>
                     </div>
                 </div>
 
@@ -227,12 +239,17 @@
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
-        const storage = firebase.storage(); // Initialize Storage
+        const storage = firebase.storage();
+
+        // --- NEW: STATE MANAGEMENT ---
+        let currentEditId = null; 
+        let clubsDataMap = {}; // Stores fetched clubs for quick population
 
         // --- AUTHENTICATION GUARD ---
         auth.onAuthStateChanged((user) => {
             if (user) {
                 document.getElementById('mainBody').classList.remove('opacity-0');
+                loadExistingClubs(); // Load clubs once authenticated
             } else {
                 window.location.replace('AdminLogin.html');
             }
@@ -242,7 +259,7 @@
             auth.signOut();
         });
 
-        // --- FORM LOGIC ---
+        // --- FORM SETUP LOGIC ---
         
         // Populate Sports List
         const sportsList = [
@@ -259,7 +276,7 @@
             sportSelect.appendChild(option);
         });
 
-        // Populate Time List (6:00 AM to 10:30 PM)
+        // Populate Time List
         const timeSelect = document.getElementById('time');
         for (let hour = 6; hour <= 22; hour++) {
             ['00', '30'].forEach(minute => {
@@ -288,6 +305,106 @@
             }
         });
 
+        // --- FETCH & POPULATE EXISTING CLUBS ---
+        async function loadExistingClubs() {
+            try {
+                const snapshot = await db.collection('clubs').get();
+                const selector = document.getElementById('clubSelector');
+                
+                // Keep only the "Create New" default option
+                selector.innerHTML = '<option value="">+ Create New Club</option>';
+                clubsDataMap = {};
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    clubsDataMap[doc.id] = data;
+                    const option = document.createElement('option');
+                    option.value = doc.id;
+                    option.textContent = `${data.name} (${data.city})`;
+                    selector.appendChild(option);
+                });
+            } catch (error) {
+                console.error("Error loading clubs:", error);
+            }
+        }
+
+        // Handle Dropdown Change (Switching between Add / Edit)
+        document.getElementById('clubSelector').addEventListener('change', (e) => {
+            const clubId = e.target.value;
+            currentEditId = clubId || null;
+
+            const formTitle = document.getElementById('formTitle');
+            const formSubtitle = document.getElementById('formSubtitle');
+            const submitBtn = document.getElementById('submitBtn');
+            const fileHints = document.querySelectorAll('.file-hint');
+            const form = document.getElementById('addClubForm');
+
+            if (currentEditId && clubsDataMap[currentEditId]) {
+                const club = clubsDataMap[currentEditId];
+                
+                // Update UI text for Editing
+                formTitle.textContent = 'Edit Club';
+                formSubtitle.textContent = `Updating information for ${club.name}`;
+                submitBtn.textContent = 'Update Club Information';
+                submitBtn.classList.replace('bg-indigo-600', 'bg-emerald-600');
+                submitBtn.classList.replace('hover:bg-indigo-700', 'hover:bg-emerald-700');
+                submitBtn.classList.replace('shadow-indigo-200', 'shadow-emerald-200');
+                
+                // Let the user know they don't have to re-upload files to keep them
+                fileHints.forEach(hint => hint.textContent = "Leave blank to keep existing media.");
+
+                // Populate Fields
+                document.getElementById('name').value = club.name || '';
+                document.getElementById('sport').value = club.sport || '';
+                document.getElementById('category').value = club.category || 'Mixed';
+                
+                if (club.price === 'Free') {
+                    isFreeCheckbox.checked = true;
+                    priceInput.value = 'Free';
+                    priceInput.disabled = true;
+                } else {
+                    isFreeCheckbox.checked = false;
+                    priceInput.value = club.price || '';
+                    priceInput.disabled = false;
+                }
+                
+                document.getElementById('skillLevel').value = club.skillLevel || '';
+                document.getElementById('city').value = club.city || '';
+                document.getElementById('location').value = club.location || '';
+                document.getElementById('lat').value = club.lat || '';
+                document.getElementById('lng').value = club.lng || '';
+                document.getElementById('day').value = club.day || '';
+                document.getElementById('time').value = club.time || '';
+                document.getElementById('trialTime').value = club.trialTime || '';
+                document.getElementById('bring').value = club.bring || '';
+                document.getElementById('description').value = club.description || '';
+                document.getElementById('website').value = club.website || '';
+                document.getElementById('email').value = club.email || '';
+                document.getElementById('phone').value = club.phone || '';
+                document.getElementById('instagram').value = club.instagram || '';
+                document.getElementById('facebook').value = club.facebook || '';
+
+                // Clear file inputs programmatically
+                document.getElementById('imageFile').value = '';
+                document.getElementById('videoFile').value = '';
+
+            } else {
+                // Reset to Create Mode
+                formTitle.textContent = 'Add a New Club';
+                formSubtitle.textContent = 'Fill out the details below to add a new sport club to the database.';
+                submitBtn.textContent = 'Add Club to Map';
+                submitBtn.classList.replace('bg-emerald-600', 'bg-indigo-600');
+                submitBtn.classList.replace('hover:bg-emerald-700', 'hover:bg-indigo-700');
+                submitBtn.classList.replace('shadow-emerald-200', 'shadow-indigo-200');
+
+                fileHints[0].textContent = "Upload a clear photo to represent the club.";
+                fileHints[1].textContent = "Upload a short video showcasing the club.";
+                
+                form.reset();
+                priceInput.disabled = false;
+            }
+        });
+
         const form = document.getElementById('addClubForm');
         const submitBtn = document.getElementById('submitBtn');
         const statusMessage = document.getElementById('statusMessage');
@@ -299,39 +416,30 @@
             setTimeout(() => statusMessage.classList.add('hidden'), 5000);
         }
 
-        // Helper function to handle file uploads
         async function uploadFile(file, folderPath) {
             if (!file) return null;
-            // Create a unique filename to prevent overwriting
             const fileName = `${folderPath}/${Date.now()}_${file.name}`;
             const storageRef = storage.ref(fileName);
-            
-            // Upload the file
             const snapshot = await storageRef.put(file);
-            
-            // Get and return the public download URL
-            const downloadUrl = await snapshot.ref.getDownloadURL();
-            return downloadUrl;
+            return await snapshot.ref.getDownloadURL();
         }
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
             const originalBtnText = submitBtn.innerHTML;
-            // Update button to inform user that files are uploading (especially important for videos)
-            submitBtn.innerHTML = 'Uploading Media & Saving...';
+            submitBtn.innerHTML = 'Saving Data...';
             submitBtn.disabled = true;
             submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
 
             try {
-                // 1. Grab files from inputs
                 const imageFile = document.getElementById('imageFile').files[0];
                 const videoFile = document.getElementById('videoFile').files[0];
 
-                let imageUrl = null;
-                let videoUrl = null;
+                // If editing, start with existing URLs. If adding, start with null.
+                let imageUrl = currentEditId ? clubsDataMap[currentEditId].imageUrl : null;
+                let videoUrl = currentEditId ? clubsDataMap[currentEditId].videoUrl : null;
 
-                // 2. Upload files concurrently if they exist
                 const uploadPromises = [];
                 
                 if (imageFile) {
@@ -341,12 +449,11 @@
                     uploadPromises.push(uploadFile(videoFile, 'club_videos').then(url => videoUrl = url));
                 }
 
-                // Wait for all uploads to finish
                 if (uploadPromises.length > 0) {
+                    submitBtn.innerHTML = 'Uploading Media...';
                     await Promise.all(uploadPromises);
                 }
 
-                // 3. Assemble the club data
                 const clubData = {
                     name: document.getElementById('name').value.trim(),
                     sport: document.getElementById('sport').value,
@@ -362,29 +469,36 @@
                     trialTime: document.getElementById('trialTime').value.trim(),
                     bring: document.getElementById('bring').value.trim(),
                     description: document.getElementById('description').value.trim(),
-                    
-                    // Added Socials & Contact
                     website: document.getElementById('website').value.trim(),
                     email: document.getElementById('email').value.trim(),
                     phone: document.getElementById('phone').value.trim(),
                     instagram: document.getElementById('instagram').value.trim(),
                     facebook: document.getElementById('facebook').value.trim(),
-
                     imageUrl: imageUrl || '', 
                     videoUrl: videoUrl || ''
                 };
 
-                // 4. Save to Firestore
-                await db.collection('clubs').add(clubData);
+                // Decide whether to Update or Add
+                if (currentEditId) {
+                    await db.collection('clubs').doc(currentEditId).update(clubData);
+                    showMessage('Success! Club information updated.');
+                } else {
+                    await db.collection('clubs').add(clubData);
+                    showMessage('Success! New club added to the database.');
+                    form.reset();
+                    priceInput.disabled = false;
+                }
+
+                // Refresh the list so the dropdown gets any new names/clubs
+                await loadExistingClubs();
                 
-                showMessage('Success! Club and media added to the database.');
-                
-                // Form reset logic + reverting price input state
-                form.reset();
-                priceInput.disabled = false; // Re-enable in case the "Free" toggle was active
+                // Re-select the currently edited club if we were in edit mode
+                if (currentEditId) {
+                    document.getElementById('clubSelector').value = currentEditId;
+                }
 
             } catch (error) {
-                console.error("Error adding document: ", error);
+                console.error("Error saving document: ", error);
                 showMessage('Error saving club: ' + error.message, true);
             } finally {
                 submitBtn.innerHTML = originalBtnText;
